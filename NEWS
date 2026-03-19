@@ -1,11 +1,26 @@
-Changes in version 1.25:
+Changes in version 1.26:
 
-lzip now exits with error status 2 if any empty member is found in a
-multimember file.
+'-dvv' and '-tvv' now print (de)compressed sizes instead of compression
+ratio. (Sizes are more informative than compression ratio).
 
-lzip now exits with error status 2 if the first byte of the LZMA stream is
-not 0.
+Large numbers in option arguments are now accepted with underscore
+separators (-s 123_456_789).
 
-Options '--empty-error' and '--marking-error' have been removed.
+Large numbers are now printed with underscore separators (123_456_789).
 
-The chapter 'Syntax of command-line arguments' has been added to the manual.
+'-h' now prints a short help screen containing only the command-line
+options. For full help, use '--help'.
+
+'--list' now can safely skip any trailing data added to a lzip file by the
+option '--append' of lziprecover.
+
+'--list' now prints '+t' after the number of members to indicate the
+presence of trailing data, and prints the size of the trailing data below
+the size of the last member.
+
+'-lvv' now prints a blank line between the list of members of each
+multimember file and the next file.
+
+Several improvements suggested by John Gilmore have been made to the manual.
+
+'EXIT STATUS' now has its own section in the man page.

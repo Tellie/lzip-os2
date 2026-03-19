@@ -1,5 +1,5 @@
 /* Lzip - LZMA lossless data compressor
-   Copyright (C) 2008-2025 Antonio Diaz Diaz.
+   Copyright (C) 2008-2026 Antonio Diaz Diaz.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -40,6 +40,37 @@ int seek_read( const int fd, uint8_t * const buf, const int size,
   return 0;
   }
 
+const uint8_t box_magic[8] = { 'T', 'D', 'A', 'T', 'A', 'B', 'O', 'X' };
+enum { min_box_size = 16 };
+
+struct Box_trailer
+  {
+  uint8_t data[8];		// box size including magic and trailer
+
+  unsigned long long box_size() const
+    {
+    unsigned long long tmp = 0;
+    for( int i = 7; i >= 0; --i ) { tmp <<= 8; tmp += data[i]; }
+    return tmp;
+    }
+  };
+
+long long skip_box( const int infd, long long pos )
+  {
+  while( pos >= min_box_size )	// "TDATABOX"<trailing data><64-bit box size>
+    {
+    Box_trailer trailer;
+    if( seek_read( infd, trailer.data, 8, pos - 8 ) != 8 ) return -1;
+    const unsigned long long box_size = trailer.box_size();
+    if( box_size > (unsigned long long)pos || box_size < min_box_size ) break;
+    uint8_t bheader[8];
+    if( seek_read( infd, bheader, 8, pos - box_size ) != 8 ) return -1;
+    if( std::memcmp( bheader, box_magic, 8 ) != 0 ) break;
+    pos -= box_size;					// good box
+    }
+  return pos;
+  }
+
 } // end namespace
 
 
@@ -63,7 +94,7 @@ void Lzip_index::set_errno_error( const char * const msg )
 void Lzip_index::set_num_error( const char * const msg, unsigned long long num )
   {
   char buf[80];
-  snprintf( buf, sizeof buf, "%s%llu", msg, num );
+  snprintf( buf, sizeof buf, "%s %s", msg, format_num3( num ) );
   error_ = buf;
   retval_ = 2;
   }
@@ -131,7 +162,7 @@ bool Lzip_index::skip_trailing_data( const int fd, unsigned long long & pos,
         return true;
         }
     if( ipos == 0 )
-      { set_num_error( "Bad trailer at pos ", pos - Lzip_trailer::size );
+      { set_num_error( "Bad trailer at pos", pos - Lzip_trailer::size );
         return false; }
     bsize = buffer_size;
     search_size = bsize - Lzip_header::size;
@@ -152,12 +183,16 @@ Lzip_index::Lzip_index( const int infd, const Cl_options & cl_opts )
       ( !read_header( infd, header, 0 ) ||
         !check_header( header ) ) ) return;
   if( insize < min_member_size )
-    { error_ = "Input file is truncated."; retval_ = 2; return; }
+    { error_ = insize ? "Input file is truncated." : "Input file is empty.";
+      retval_ = 2; return; }
   if( insize > INT64_MAX )
     { error_ = "Input file is too long (2^63 bytes or more).";
       retval_ = 2; return; }
 
-  unsigned long long pos = insize;	// always points to a header or to EOF
+  // use skip_box as preprocessor, skip remaining trailing data normally
+  const long long box_pos = skip_box( infd, insize );
+  // pos always points to a header (lzip or tdatabox) or to EOF
+  unsigned long long pos = (box_pos >= 0) ? box_pos : 0;	// 0 = error
   while( pos >= min_member_size )
     {
     Lzip_trailer trailer;
@@ -169,14 +204,14 @@ Lzip_index::Lzip_index( const int infd, const Cl_options & cl_opts )
       {
       if( member_vector.empty() )
         { if( skip_trailing_data( infd, pos, cl_opts ) ) continue; return; }
-      set_num_error( "Bad trailer at pos ", pos - trailer.size ); break;
+      set_num_error( "Bad trailer at pos", pos - trailer.size ); break;
       }
     if( !read_header( infd, header, pos - member_size ) ) break;
     if( !header.check() )				// bad header
       {
       if( member_vector.empty() )
         { if( skip_trailing_data( infd, pos, cl_opts ) ) continue; return; }
-      set_num_error( "Bad header at pos ", pos - member_size ); break;
+      set_num_error( "Bad header at pos", pos - member_size ); break;
       }
     pos -= member_size;					// good member
     const unsigned dictionary_size = header.dictionary_size();

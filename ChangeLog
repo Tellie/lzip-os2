@@ -1,3 +1,19 @@
+2026-03-09  Antonio Diaz Diaz  <antonio@gnu.org>
+
+	* Version 1.26 released.
+	* decoder.cc (check_trailer): With -vv print sizes, not ratios.
+	  (decode_member): Rename rep[0-3] to dis[0-3].
+	* list.cc (list_files): Print size of tdata below sizes of members.
+	  With -vv print a blank line between files.
+	* lzip_index.cc (skip_box): New function.
+	* main.cc (getnum): Accept underscore separators ('_').
+	  (show_help): New argument 'bool full' to print usage or full help.
+	  (Suggested by Murray Calavera and Adam Tuja).
+	  (show_help): Print "*Exit status*" for section in man page.
+	  (Suggested by Murray Calavera).
+	* Print large numbers with underscore separators ('_').
+	* lzip.texi: Add several improvements suggested by John Gilmore.
+
 2025-01-11  Antonio Diaz Diaz  <antonio@gnu.org>
 
 	* Version 1.25 released.
@@ -348,7 +364,7 @@
 	* Version 0.1 released.
 
 
-Copyright (C) 2008-2025 Antonio Diaz Diaz.
+Copyright (C) 2008-2026 Antonio Diaz Diaz.
 
 This file is a collection of facts, and thus it is not copyrightable, but just
 in case, you have unlimited permission to copy, distribute, and modify it.

@@ -1,5 +1,5 @@
 /* Lzip - LZMA lossless data compressor
-   Copyright (C) 2008-2025 Antonio Diaz Diaz.
+   Copyright (C) 2008-2026 Antonio Diaz Diaz.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -41,7 +41,7 @@ bool Matchfinder_base::read_block()
     const int size = buffer_size - stream_pos;
     const int rd = readblock( infd, buffer + stream_pos, size );
     stream_pos += rd;
-    if( rd != size && errno ) throw Error( "Read error" );
+    if( rd != size && errno ) throw Error( rd_err_msg );
     if( rd < size ) { at_stream_end = true; pos_limit = buffer_size; }
     }
   return pos < stream_pos;
@@ -155,7 +155,7 @@ void Range_encoder::flush_data()
   }
 
 
-// End Of Stream marker => (dis == 0xFFFFFFFFU, len == min_match_len)
+// End Of Stream marker => (dis == 0xFFFF_FFFF, len == min_match_len)
 void LZ_encoder_base::full_flush( const State state )
   {
   const int pos_state = data_position() & pos_state_mask;

@@ -1,5 +1,5 @@
 /* Lzip - LZMA lossless data compressor
-   Copyright (C) 2008-2025 Antonio Diaz Diaz.
+   Copyright (C) 2008-2026 Antonio Diaz Diaz.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -169,7 +169,7 @@ void LZ_encoder::update_distance_prices()
 
 /* Return the number of bytes advanced (ahead).
    trials[0]..trials[ahead-1] contain the steps to encode.
-   ( trials[0].dis4 == -1 ) means literal.
+   ( trials[0].cdis == -1 ) means literal.
    A match/rep longer or equal than match_len_limit finishes the sequence.
 */
 int LZ_encoder::sequence_optimizer( const int reps[num_rep_distances],
@@ -196,7 +196,7 @@ int LZ_encoder::sequence_optimizer( const int reps[num_rep_distances],
   if( replens[rep_index] >= match_len_limit )
     {
     trials[0].price = replens[rep_index];
-    trials[0].dis4 = rep_index;
+    trials[0].cdis = rep_index;
     move_and_update( replens[rep_index] );
     return replens[rep_index];
     }
@@ -204,7 +204,7 @@ int LZ_encoder::sequence_optimizer( const int reps[num_rep_distances],
   if( main_len >= match_len_limit )
     {
     trials[0].price = main_len;
-    trials[0].dis4 = pairs[num_pairs-1].dis + num_rep_distances;
+    trials[0].cdis = pairs[num_pairs-1].dis + num_rep_distances;
     move_and_update( main_len );
     return main_len;
     }
@@ -219,7 +219,7 @@ int LZ_encoder::sequence_optimizer( const int reps[num_rep_distances],
     trials[1].price += price_literal( prev_byte, cur_byte );
   else
     trials[1].price += price_matched( prev_byte, cur_byte, match_byte );
-  trials[1].dis4 = -1;					// literal
+  trials[1].cdis = -1;					// literal
 
   const int match_price = price1( bm_match[state()][pos_state] );
   const int rep_match_price = match_price + price1( bm_rep[state()] );
@@ -232,7 +232,7 @@ int LZ_encoder::sequence_optimizer( const int reps[num_rep_distances],
   if( num_trials < min_match_len )
     {
     trials[0].price = 1;
-    trials[0].dis4 = trials[1].dis4;
+    trials[0].cdis = trials[1].cdis;
     move_pos();
     return 1;
     }
@@ -290,7 +290,7 @@ int LZ_encoder::sequence_optimizer( const int reps[num_rep_distances],
     Trial & cur_trial = trials[cur];
     State cur_state;
     {
-    const int dis4 = cur_trial.dis4;
+    const int cdis = cur_trial.cdis;
     int prev_index = cur_trial.prev_index;
     const int prev_index2 = cur_trial.prev_index2;
 
@@ -299,15 +299,15 @@ int LZ_encoder::sequence_optimizer( const int reps[num_rep_distances],
       cur_state = trials[prev_index].state;
       if( prev_index + 1 == cur )			// len == 1
         {
-        if( dis4 == 0 ) cur_state.set_shortrep();
+        if( cdis == 0 ) cur_state.set_shortrep();
         else cur_state.set_char();			// literal
         }
-      else if( dis4 < num_rep_distances ) cur_state.set_rep();
+      else if( cdis < num_rep_distances ) cur_state.set_rep();
       else cur_state.set_match();
       }
     else
       {
-      if( prev_index2 == dual_step_trial )	// dis4 == 0 (rep0)
+      if( prev_index2 == dual_step_trial )	// cdis == 0 (rep0)
         --prev_index;
       else					// prev_index2 >= 0
         prev_index = prev_index2;
@@ -316,7 +316,7 @@ int LZ_encoder::sequence_optimizer( const int reps[num_rep_distances],
     cur_trial.state = cur_state;
     for( int i = 0; i < num_rep_distances; ++i )
       cur_trial.reps[i] = trials[prev_index].reps[i];
-    mtf_reps( dis4, cur_trial.reps );		// literal is ignored
+    mtf_reps( cdis, cur_trial.reps );		// literal is ignored
     }
 
     const int pos_state = data_position() & pos_state_mask;
@@ -336,17 +336,18 @@ int LZ_encoder::sequence_optimizer( const int reps[num_rep_distances],
 
     next_trial.update( next_price, -1, cur );		// literal
 
-    const int match_price = cur_trial.price + price1( bm_match[cur_state()][pos_state] );
+    const int match_price =
+      cur_trial.price + price1( bm_match[cur_state()][pos_state] );
     const int rep_match_price = match_price + price1( bm_rep[cur_state()] );
 
-    if( match_byte == cur_byte && next_trial.dis4 != 0 &&
+    if( match_byte == cur_byte && next_trial.cdis != 0 &&
         next_trial.prev_index2 == single_step_trial )
       {
       const int price = rep_match_price + price_shortrep( cur_state, pos_state );
       if( price <= next_trial.price )
         {
         next_trial.price = price;
-        next_trial.dis4 = 0;				// rep0
+        next_trial.cdis = 0;				// rep0
         next_trial.prev_index = cur;
         }
       }
@@ -485,7 +486,7 @@ bool LZ_encoder::encode_member( const unsigned long long member_size )
   int price_counter = 0;		// counters may decrement below 0
   int dis_price_counter = 0;
   int align_price_counter = 0;
-  int reps[num_rep_distances];
+  int reps[num_rep_distances];		// latest four distances
   State state;
   for( int i = 0; i < num_rep_distances; ++i ) reps[i] = 0;
 
@@ -527,7 +528,7 @@ bool LZ_encoder::encode_member( const unsigned long long member_size )
       {
       const int pos_state = ( data_position() - ahead ) & pos_state_mask;
       const int len = trials[i].price;
-      int dis = trials[i].dis4;
+      int dis = trials[i].cdis;
 
       bool bit = dis < 0;
       renc.encode_bit( bm_match[state()][pos_state], !bit );

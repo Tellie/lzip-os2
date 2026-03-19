@@ -4,9 +4,9 @@ Description
 
 Lzip is a lossless data compressor with a user interface similar to the one
 of gzip or bzip2. Lzip uses a simplified form of LZMA (Lempel-Ziv-Markov
-chain-Algorithm) designed to achieve complete interoperability between
-implementations. The maximum dictionary size is 512 MiB so that any lzip
-file can be decompressed on 32-bit machines. Lzip provides accurate and
+chain-Algorithm) and is designed to achieve complete interoperability
+between implementations. The maximum dictionary size is 512 MiB so that any
+lzip file can be decompressed on 32-bit machines. Lzip provides accurate and
 robust 3-factor integrity checking. 'lzip -0' compresses about as fast as
 gzip, while 'lzip -9' compresses most files more than bzip2. Decompression
 speed is intermediate between gzip and bzip2. Lzip provides better data
@@ -25,7 +25,7 @@ alignment between tar members and lzip members.
 The lzip file format is designed for data sharing and long-term archiving,
 taking into account both data integrity and decoder availability:
 
-   * The program lziprecover can repair bit flip errors (one of the most
+   * The program lziprecover can repair bit-flip errors (one of the most
      common forms of data corruption) in lzip files, and provides data
      recovery capabilities, including error-checked merging of damaged
      copies of a file.
@@ -128,7 +128,7 @@ Lzip uses Arg_parser for command-line argument parsing:
 http://www.nongnu.org/arg-parser/arg_parser.html
 
 
-Copyright (C) 2008-2025 Antonio Diaz Diaz.
+Copyright (C) 2008-2026 Antonio Diaz Diaz.
 
 This file is free documentation: you have unlimited permission to copy,
 distribute, and modify it.

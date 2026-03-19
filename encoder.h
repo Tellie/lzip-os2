@@ -1,5 +1,5 @@
 /* Lzip - LZMA lossless data compressor
-   Copyright (C) 2008-2025 Antonio Diaz Diaz.
+   Copyright (C) 2008-2026 Antonio Diaz Diaz.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -91,33 +91,32 @@ class LZ_encoder : public LZ_encoder_base
     {
     State state;
     int price;		// dual use var; cumulative price, match length
-    int dis4;		// -1 for literal, or rep, or match distance + 4
+    int cdis;		// -1 for literal, or rep, or match distance + 4
     int prev_index;	// index of prev trial in trials[]
     int prev_index2;	//   -2  trial is single step
 			//   -1  literal + rep0
 			// >= 0  ( rep or match ) + literal + rep0
-    int reps[num_rep_distances];
+    int reps[num_rep_distances];	// latest four distances
 
-    void update( const int pr, const int distance4, const int p_i )
+    void update( const int pr, const int cdi, const int p_i )
       {
       if( pr < price )
-        { price = pr; dis4 = distance4; prev_index = p_i;
+        { price = pr; cdis = cdi; prev_index = p_i;
           prev_index2 = single_step_trial; }
       }
 
     void update2( const int pr, const int p_i )
       {
       if( pr < price )
-        { price = pr; dis4 = 0; prev_index = p_i;
+        { price = pr; cdis = 0; prev_index = p_i;
           prev_index2 = dual_step_trial; }
       }
 
-    void update3( const int pr, const int distance4, const int p_i,
+    void update3( const int pr, const int cdi, const int p_i,
                   const int p_i2 )
       {
       if( pr < price )
-        { price = pr; dis4 = distance4; prev_index = p_i;
-          prev_index2 = p_i2; }
+        { price = pr; cdis = cdi; prev_index = p_i; prev_index2 = p_i2; }
       }
     };
 
@@ -146,18 +145,18 @@ class LZ_encoder : public LZ_encoder_base
   int get_match_pairs( Pair * pairs = 0 );
   void update_distance_prices();
 
-       // move-to-front dis in/into reps; do nothing if( dis4 <= 0 )
-  static void mtf_reps( const int dis4, int reps[num_rep_distances] )
+       // move-to-front dis in/into reps; do nothing if( cdis <= 0 )
+  static void mtf_reps( const int cdis, int reps[num_rep_distances] )
     {
-    if( dis4 >= num_rep_distances )			// match
+    if( cdis >= num_rep_distances )			// match
       {
       reps[3] = reps[2]; reps[2] = reps[1]; reps[1] = reps[0];
-      reps[0] = dis4 - num_rep_distances;
+      reps[0] = cdis - num_rep_distances;
       }
-    else if( dis4 > 0 )				// repeated match
+    else if( cdis > 0 )				// repeated match
       {
-      const int distance = reps[dis4];
-      for( int i = dis4; i > 0; --i ) reps[i] = reps[i-1];
+      const int distance = reps[cdis];
+      for( int i = cdis; i > 0; --i ) reps[i] = reps[i-1];
       reps[0] = distance;
       }
     }
@@ -224,7 +223,7 @@ class LZ_encoder : public LZ_encoder_base
 
   void backward( int cur )
     {
-    int dis4 = trials[cur].dis4;
+    int cdis = trials[cur].cdis;
     while( cur > 0 )
       {
       const int prev_index = trials[cur].prev_index;
@@ -232,19 +231,19 @@ class LZ_encoder : public LZ_encoder_base
 
       if( trials[cur].prev_index2 != single_step_trial )
         {
-        prev_trial.dis4 = -1;					// literal
+        prev_trial.cdis = -1;					// literal
         prev_trial.prev_index = prev_index - 1;
         prev_trial.prev_index2 = single_step_trial;
         if( trials[cur].prev_index2 >= 0 )
           {
           Trial & prev_trial2 = trials[prev_index-1];
-          prev_trial2.dis4 = dis4; dis4 = 0;			// rep0
+          prev_trial2.cdis = cdis; cdis = 0;			// rep0
           prev_trial2.prev_index = trials[cur].prev_index2;
           prev_trial2.prev_index2 = single_step_trial;
           }
         }
       prev_trial.price = cur - prev_index;			// len
-      cur = dis4; dis4 = prev_trial.dis4; prev_trial.dis4 = cur;
+      cur = cdis; cdis = prev_trial.cdis; prev_trial.cdis = cur;
       cur = prev_index;
       }
     }

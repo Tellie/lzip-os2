@@ -1,5 +1,5 @@
 /* Lzip - LZMA lossless data compressor
-   Copyright (C) 2008-2025 Antonio Diaz Diaz.
+   Copyright (C) 2008-2026 Antonio Diaz Diaz.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -332,9 +332,10 @@ inline void set_retval( int & retval, const int new_val )
 const char * const bad_magic_msg = "Bad magic number (file not in lzip format).";
 const char * const bad_dict_msg = "Invalid dictionary size in member header.";
 const char * const corrupt_mm_msg = "Corrupt header in multimember file.";
-const char * const empty_msg = "Empty member not allowed.";
+const char * const empty_member_msg = "Empty member not allowed.";
 const char * const nonzero_msg = "Nonzero first LZMA byte.";
 const char * const trailing_msg = "Trailing data not allowed.";
+const char * const rd_err_msg = "Read error";
 const char * const wr_err_msg = "Write error";
 
 // defined in decoder.cc
@@ -350,6 +351,7 @@ struct stat;
 const char * bad_version( const unsigned version );
 const char * format_ds( const unsigned dictionary_size );
 void show_header( const unsigned dictionary_size );
+const char * format_num3( unsigned long long num );
 int open_instream( const char * const name, struct stat * const in_statsp,
                    const bool one_to_one, const bool reg_only = false );
 void show_error( const char * const msg, const int errcode = 0,
