@@ -1,5 +1,5 @@
 /* Lzip - LZMA lossless data compressor
-   Copyright (C) 2008-2025 Antonio Diaz Diaz.
+   Copyright (C) 2008-2026 Antonio Diaz Diaz.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -91,11 +91,10 @@ public:
       { range <<= 8; code = ( code << 8 ) | get_byte(); }
     }
 
-  unsigned decode( const int num_bits )
+  unsigned decode( int num_bits )
     {
     unsigned symbol = 0;
-    for( int i = num_bits; i > 0; --i )
-      {
+    do {
       normalize();
       range >>= 1;
 //      symbol <<= 1;
@@ -103,7 +102,7 @@ public:
       const bool bit = code >= range;
       symbol <<= 1; symbol += bit;
       code -= range & ( 0U - bit );
-      }
+      } while( --num_bits > 0 );
     return symbol;
     }
 
@@ -290,16 +289,17 @@ class LZ_decoder
 
   void copy_block( const unsigned distance, unsigned len )
     {
-    unsigned lpos = pos, i = lpos - distance - 1;
+    unsigned lpos = pos, i;
     bool fast, fast2;
     if( lpos > distance )
       {
+      i = lpos - distance - 1;
       fast = len < dictionary_size - lpos;
       fast2 = fast && len <= lpos - i;
       }
     else
       {
-      i += dictionary_size;
+      i = dictionary_size + lpos - distance - 1;
       fast = len < dictionary_size - i;		// (i == pos) may happen
       fast2 = fast && len <= i - lpos;
       }
@@ -334,8 +334,7 @@ public:
     crc_( 0xFFFFFFFFU ),
     outfd( ofd ),
     pos_wrapped( false )
-    // prev_byte of first byte; also for peek( 0 ) on corrupt file
-    { buffer[dictionary_size-1] = 0; }
+    { buffer[dictionary_size-1] = 0; }		// prev_byte of first byte
 
   ~LZ_decoder() { delete[] buffer; }
 

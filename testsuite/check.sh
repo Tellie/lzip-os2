@@ -1,6 +1,6 @@
 #! /bin/sh
 # check script for Lzip - LZMA lossless data compressor
-# Copyright (C) 2008-2025 Antonio Diaz Diaz.
+# Copyright (C) 2008-2026 Antonio Diaz Diaz.
 #
 # This script is free software: you have unlimited permission
 # to copy, distribute, and modify it.
@@ -37,14 +37,14 @@ test_failed() { fail=1 ; printf " $1" ; [ -z "$2" ] || printf "($2)" ; }
 
 printf "testing lzip-%s..." "$2"
 
-"${LZIP}" -fkqm4 in
+"${LZIP}" -fkq -m4 in
 [ $? = 1 ] || test_failed $LINENO
 [ ! -e in.lz ] || test_failed $LINENO
-"${LZIP}" -fkqm274 in
+"${LZIP}" -fkq -m274 in
 [ $? = 1 ] || test_failed $LINENO
 [ ! -e in.lz ] || test_failed $LINENO
-for i in bad_size -1 0 4095 513MiB 1G 1T 1P 1E 1Z 1Y 10KB ; do
-	"${LZIP}" -fkqs $i in
+for i in bad_size -1 0 0x 4095 0xFFF 07777 513MiB 1G 1T 1P 1E 1Z 1Y 10KB ; do
+	"${LZIP}" -fkq -s $i in
 	[ $? = 1 ] || test_failed $LINENO $i
 	[ ! -e in.lz ] || test_failed $LINENO $i
 done
@@ -306,19 +306,19 @@ done
 rm -f copy out.lz || framework_failure
 
 cat in in in in in in in in > in8 || framework_failure
-"${LZIP}" -1s12 -S100k in8 || test_failed $LINENO
+"${LZIP}" -1 -s0x0C -S100_000 in8 || test_failed $LINENO
 "${LZIP}" -t in800001.lz in800002.lz || test_failed $LINENO
 "${LZIP}" -cd in800001.lz in800002.lz | cmp in8 - || test_failed $LINENO
 [ ! -e in800003.lz ] || test_failed $LINENO
 rm -f in800001.lz in800002.lz || framework_failure
-"${LZIP}" -1s12 -S100k -o out.lz in8 || test_failed $LINENO
+"${LZIP}" -1 -s014 -S100k -o out.lz in8 || test_failed $LINENO
 # ignore -S
 "${LZIP}" -d out.lz00001.lz out.lz00002.lz -S100k -o out || test_failed $LINENO
 cmp in8 out || test_failed $LINENO
 "${LZIP}" -t out.lz00001.lz out.lz00002.lz || test_failed $LINENO
 [ ! -e out.lz00003.lz ] || test_failed $LINENO
 rm -f out out.lz00001.lz out.lz00002.lz || framework_failure
-"${LZIP}" -1ks4Ki -b100000 in8 || test_failed $LINENO
+"${LZIP}" -1k -s4_096 -b100000 in8 || test_failed $LINENO
 "${LZIP}" -t in8.lz || test_failed $LINENO
 "${LZIP}" -cd in8.lz -o out | cmp in8 - || test_failed $LINENO	# override -o
 [ ! -e out ] || test_failed $LINENO
